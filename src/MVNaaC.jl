@@ -52,8 +52,8 @@ function construct_hyperparameters(options)
     x = options.x
     n = length(x)
     d = length(x[1])
-    mu = mean(x)
-    v = mean([xi.*xi for xi in x]) .- mu.*mu  # sample variance
+    mu = mean.(x)
+    v = mean.([xi.*xi for xi in x]) .- mu.*mu  # sample variance
     @assert(all(abs.(mu) .< 1e-10) && all(abs.(v .- 1.0) .< 1e-10), "Data must be normalized to zero mean, unit variance.")
     m = 0.0
     c = 1.0
