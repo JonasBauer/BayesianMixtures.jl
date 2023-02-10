@@ -5,7 +5,7 @@ include("MFM.jl")
 include("RandomNumbers.jl")
 
 include("Normal.jl")
-include("MN.jl"
+include("MN.jl")
 include("MVN.jl")
 include("MVNaaC.jl")
 include("MVNaaN.jl")
