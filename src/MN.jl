@@ -1,7 +1,7 @@
 # Multinomial set up using conjugate prior.
-module MVN
+module MN
 
-module MVNmodel
+module MNmodel
 export Theta, Data, log_likelihood, log_prior, prior_sample!, new_theta, Theta_clear!, Theta_adjoin!, Theta_remove!,
        Hyperparameters, construct_hyperparameters, update_hyperparameters!, update_parameter!, mixrnd, mixture_density
        
@@ -19,7 +19,7 @@ const NU_SIGMA_PROP = 0.1  # Metropolis proposal std dev for H.R.nu updates
 const Data = Array{Float64,1}
 
 # Multivariate normal distribution
-mutable struct MVN_params
+mutable struct MN_params
     # read/write
     m::Array{Float64,1} # mean
     # read/restricted-write (must notify after writing)
@@ -33,7 +33,7 @@ mutable struct MVN_params
     n::Int64 # number of data points assigned to this cluster
     sum_x::Array{Float64,1} # sum of the data points x assigned to this cluster
     sum_xx::Array{Float64,2} # sum of x*x' for the data points assigned to this cluster
-    function MVN_params(m,R)
+    function MN_params(m,R)
         p = new(); p.m = copy(m); p._R = copy(R); p._R_valid = true; p.d = d = length(m)
         p.L = zeros(d,d); Lower.Cholesky!(p.L,p._R,d)
         p.logdetR = Lower.logdetsq(p.L,d)
@@ -43,14 +43,14 @@ mutable struct MVN_params
         return p
     end
 end
-# Interface functions for MVN_params
-MVN_logpdf(x,p) = -0.5*Lower.quadratic(x, p.m, p.L, p.d) - 0.5*p.d*log(2*pi) + 0.5*p.logdetR
-MVN_sample!(x,p) = Lower.sample_Normal!(x, p.m, p.L, p.d)
-MVN_get_R!(p) = (if !p._R_valid; Lower.multiplyMNt!(p._R,p.L,p.L,p.d); p._R_valid=true; end; p._R)
-MVN_notify_L!(p) = (p.logdetR = Lower.logdetsq(p.L,p.d); p._R_valid = false) # call this after modifying L
-MVN_clear!(p) = (fill!(p.sum_x,0.); fill!(p.sum_xx,0.); p.n=0)
-MVN_adjoin!(p,x) = (for i=1:p.d; p.sum_x[i]+=x[i]; for j=1:p.d; p.sum_xx[i,j]+=x[i]*x[j]; end; end; p.n+=1)
-MVN_remove!(p,x) = (for i=1:p.d; p.sum_x[i]-=x[i]; for j=1:p.d; p.sum_xx[i,j]-=x[i]*x[j]; end; end; p.n-=1)
+# Interface functions for MN_params
+MN_logpdf(x,p) = -0.5*Lower.quadratic(x, p.m, p.L, p.d) - 0.5*p.d*log(2*pi) + 0.5*p.logdetR
+MN_sample!(x,p) = Lower.sample_Normal!(x, p.m, p.L, p.d)
+MN_get_R!(p) = (if !p._R_valid; Lower.multiplyMNt!(p._R,p.L,p.L,p.d); p._R_valid=true; end; p._R)
+MN_notify_L!(p) = (p.logdetR = Lower.logdetsq(p.L,p.d); p._R_valid = false) # call this after modifying L
+MN_clear!(p) = (fill!(p.sum_x,0.); fill!(p.sum_xx,0.); p.n=0)
+MN_adjoin!(p,x) = (for i=1:p.d; p.sum_x[i]+=x[i]; for j=1:p.d; p.sum_xx[i,j]+=x[i]*x[j]; end; end; p.n+=1)
+MN_remove!(p,x) = (for i=1:p.d; p.sum_x[i]-=x[i]; for j=1:p.d; p.sum_xx[i,j]-=x[i]*x[j]; end; end; p.n-=1)
 
 
 
@@ -106,13 +106,13 @@ LogGamma_logpdf(x,p) = p.a*x - p.b*exp(x) - p.c
 
 
 mutable struct Hyperparameters
-    m::MVN_params # parameters of m's (component means)
+    m::MN_params # parameters of m's (component means)
     R::Wishart_params # parameters of R's (component precisions)
-    mm::MVN_params # parameters of m.m
+    mm::MN_params # parameters of m.m
     mR::Wishart_params # parameters of m.R
     Rn::LogGamma_params # parameters of R.nu
     RW::Wishart_params # parameters of R.W
-    mp::MVN_params # temporary variable for the posterior of m's
+    mp::MN_params # temporary variable for the posterior of m's
     Rp::Wishart_params # temporary variable for the posterior of R's
     A::Array{Float64,2} # temporary variable for computations
     x::Array{Float64,1} # temporary variable for computations
@@ -120,13 +120,13 @@ mutable struct Hyperparameters
 end
 
 # likelihood: Normal(x|mean=m,Cov=inv(R)) (Note: R is represented as L*L'.)
-const Theta = MVN_params
-Theta_clear!,Theta_adjoin!,Theta_remove! = MVN_clear!,MVN_adjoin!,MVN_remove!
-log_likelihood(x,p) = MVN_logpdf(x,p)
+const Theta = MN_params
+Theta_clear!,Theta_adjoin!,Theta_remove! = MN_clear!,MN_adjoin!,MN_remove!
+log_likelihood(x,p) = MN_logpdf(x,p)
 # prior: Normal(m|mean=H.m.m,Cov=inv(H.m.L*H.m.L')) Wishart(R|Scale=H.R.M*H.R.M',DOF=H.R.nu)
-log_prior(p,H) = MVN_logpdf(p.m,H.m) + Wishart_logpdf(MVN_get_R!(p),p.L,H.R)
-new_theta(H) = MVN_params(zeros(H.d),eye(H.d))
-prior_sample!(p,H) = (MVN_sample!(p.m,H.m); Wishart_sample!(p.L,H.R); MVN_notify_L!(p))
+log_prior(p,H) = MN_logpdf(p.m,H.m) + Wishart_logpdf(MN_get_R!(p),p.L,H.R)
+new_theta(H) = MN_params(zeros(H.d),eye(H.d))
+prior_sample!(p,H) = (MN_sample!(p.m,H.m); Wishart_sample!(p.L,H.R); MN_notify_L!(p))
 
 
 sum_outer(x,m,d,n) = (S=zeros(d,d); for k = 1:n, i=1:d, j=1:d; S[i,j] += (x[k][i]-m[i])*(x[k][j]-m[j]); end; S)
@@ -139,10 +139,10 @@ function construct_hyperparameters(options)
     C_hat = sum_outer(x,m_hat,d,n)/n
     R_hat = inv(cholesky(C_hat))
     
-    mm = MVN_params(m_hat,R_hat) # these are fixed
+    mm = MN_params(m_hat,R_hat) # these are fixed
     mR = Wishart_params(d,C_hat) # these are fixed
     
-    m = MVN_params(m_hat,R_hat) # initialize to typical values (E(m.m), E(m.R))
+    m = MN_params(m_hat,R_hat) # initialize to typical values (E(m.m), E(m.R))
     
     RW = Wishart_params(d,R_hat) # these are fixed
     
@@ -153,7 +153,7 @@ function construct_hyperparameters(options)
     R = Wishart_params(d,C_hat) # initialize to typical values
     # This choice of initial R.nu,R.W is derived by setting R.nu=E(R.nu)=d and R.W=E(R.W)=C_hat.
     
-    mp = MVN_params(zeros(d),eye(d))
+    mp = MN_params(zeros(d),eye(d))
     Rp = Wishart_params(d,eye(d))
     
     A = zeros(d,d)
@@ -165,19 +165,19 @@ end
 
 function NormalWishart_update!(a,b,m_params,R_params,H,active,density)
     d = H.d
-    a_R = MVN_get_R!(a)
-    m_params_R = MVN_get_R!(m_params)
+    a_R = MN_get_R!(a)
+    m_params_R = MN_get_R!(m_params)
 
     # update mean
     for i = 1:d*d; H.A[i] = m_params_R[i] + b.n * a_R[i]; end
-    Lower.Cholesky!(H.mp.L, H.A, d); MVN_notify_L!(H.mp)
+    Lower.Cholesky!(H.mp.L, H.A, d); MN_notify_L!(H.mp)
     for i = 1:d
         r = 0.; for j = 1:d; r += m_params_R[i,j]*m_params.m[j] + a_R[i,j]*b.sum_x[j]; end
         H.x[i] = r
     end
     Lower.solve_Lx_eq_y!(H.mp.L, H.x, H.x, d)
     Lower.solve_Ltx_eq_y!(H.mp.L, H.mp.m, H.x, d)
-    if active; MVN_sample!(b.m, H.mp); end
+    if active; MN_sample!(b.m, H.mp); end
     
     # update precision matrix
     Wishart_set_nu!(H.Rp, b.n + R_params.nu)
@@ -185,10 +185,10 @@ function NormalWishart_update!(a,b,m_params,R_params,H,active,density)
         H.Rp.W[i,j] = (R_params.nu*R_params.W[i,j] + b.sum_xx[i,j] 
             - b.sum_x[i]*b.m[j] - b.m[i]*b.sum_x[j] + b.n*b.m[i]*b.m[j]) / H.Rp.nu
     end; Wishart_notify_W!(H.Rp)
-    if active; Wishart_sample!(b.L, H.Rp); MVN_notify_L!(b); end
+    if active; Wishart_sample!(b.L, H.Rp); MN_notify_L!(b); end
     
     # compute density
-    return (density ? MVN_logpdf(b.m, H.mp) + Wishart_logpdf(MVN_get_R!(b), b.L, H.Rp) : NaN)
+    return (density ? MN_logpdf(b.m, H.mp) + Wishart_logpdf(MN_get_R!(b), b.L, H.Rp) : NaN)
 end
 
 function Wishart_update!(p,W_params,nu_params,H)
@@ -228,13 +228,13 @@ end
 
 function update_hyperparameters!(H,theta,list,t,x,z)
     # update the hyperparameters of the mean (m.m and m.R)
-    MVN_clear!(H.m)
-    for k = 1:t; MVN_adjoin!(H.m, theta[list[k]].m); end
+    MN_clear!(H.m)
+    for k = 1:t; MN_adjoin!(H.m, theta[list[k]].m); end
     NormalWishart_update!(H.m,H.m,H.mm,H.mR,H,true,false)
     
     # update the hyperparameters of the precision (R.W and R.nu)
     Wishart_clear!(H.R)
-    for k = 1:t; tk=theta[list[k]]; Wishart_adjoin!(H.R, MVN_get_R!(tk), tk.logdetR); end
+    for k = 1:t; tk=theta[list[k]]; Wishart_adjoin!(H.R, MN_get_R!(tk), tk.logdetR); end
     Wishart_update!(H.R,H.RW,H.Rn,H)
 end
 
@@ -248,7 +248,7 @@ function mixrnd(n,probabilities,theta)
     k = length(probabilities)
     z = randp(probabilities[1:k],n) # component assignments
     d = theta[1].d
-    x = [MVN_sample!(zeros(d),theta[z[i]])::Array{Float64,1} for i = 1:n]
+    x = [MN_sample!(zeros(d),theta[z[i]])::Array{Float64,1} for i = 1:n]
     return x,z
 end
 
@@ -261,8 +261,8 @@ function mixture_density(x,probabilities,theta)
     return px
 end
 
-end # module MVNmodel
-using .MVNmodel
+end # module MNmodel
+using .MNmodel
 
 # Include generic code
 include("generic.jl")
@@ -270,7 +270,7 @@ include("generic.jl")
 # Include core sampler code
 include("coreNonconjugate.jl")
 
-end # module MVN
+end # module MN
 
 
 
