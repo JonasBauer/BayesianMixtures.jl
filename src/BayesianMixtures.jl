@@ -52,7 +52,7 @@ function options(
         # RJMCMC options:
         k_max=t_max # a guess at an upper bound on # of components that will be encountered during MCMC
     )
-    print("hello")
+    print("hello2")
 
     # Compute partition distribution values
     n = length(x)
