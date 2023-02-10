@@ -5,6 +5,7 @@ include("MFM.jl")
 include("RandomNumbers.jl")
 
 include("Normal.jl")
+include("MN.jl"
 include("MVN.jl")
 include("MVNaaC.jl")
 include("MVNaaN.jl")
@@ -24,7 +25,7 @@ lgamma_(x) = logabsgamma(x)[1]
 
 # Create an options object to specify model, data, and MCMC parameters.
 function options(
-        mode, # "Normal", "MVN", "MVNaaC", "MVNaaN", or "MVNaaRJ" 
+        mode, # "Normal", "MVN", "MVNaaC", "MVNaaN", "MN", or "MVNaaRJ"
         model_type, # "MFM" or "DPM"
         x, # data
         n_total; # total number of MCMC sweeps to run the sampler
