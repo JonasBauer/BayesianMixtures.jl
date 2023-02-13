@@ -4,7 +4,7 @@ module BayesianMixtures
 include("MFM.jl")
 include("RandomNumbers.jl")
 include("Normal.jl")
-include("Multi.jl")
+include("MN.jl")
 include("MVN.jl")
 include("MVNaaC.jl")
 include("MVNaaN.jl")
@@ -51,8 +51,7 @@ function options(
         # RJMCMC options:
         k_max=t_max # a guess at an upper bound on # of components that will be encountered during MCMC
     )
-    print("hello2")
-
+    
     # Compute partition distribution values
     n = length(x)
     if model_type=="MFM"
