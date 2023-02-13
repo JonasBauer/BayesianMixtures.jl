@@ -1,7 +1,7 @@
 # Axis-aligned multivariate normal (i.e., independent entries, i.e., diagonal covariance matrix) using conjugate prior.
-module Multi
+module Multinomial
 
-module Multi # submodule for component family definitions
+module Multinomial # submodule for component family definitions
 export Theta, Data, log_marginal, new_theta, Theta_clear!, Theta_adjoin!, Theta_remove!,
        Hyperparameters, construct_hyperparameters, update_hyperparameters!
 
@@ -68,8 +68,7 @@ function update_hyperparameters!(H,theta,list,t,x,z)
     #error("update_hyperparameters is not yet implemented.")
 end
 
-end # module MultiCmodel
-using .MultiCmodel
+end
 
 # Include generic code
 include("generic.jl")

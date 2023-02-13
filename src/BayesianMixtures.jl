@@ -3,9 +3,8 @@ module BayesianMixtures
 
 include("MFM.jl")
 include("RandomNumbers.jl")
-
 include("Normal.jl")
-include("MN.jl")
+include("Multi.jl")
 include("MVN.jl")
 include("MVNaaC.jl")
 include("MVNaaN.jl")
