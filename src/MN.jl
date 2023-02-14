@@ -10,23 +10,27 @@ using SpecialFunctions
 
 const Data = Array{Float64,1}
 
+lgauss = function (n::Int64)
+    log.(n*(n.+1)./2)
+end
 mutable struct Theta
     n::Int64                 # number of data points assigned to this cluster
-    sum_x::Array{Float64,1}  # sum of the data points x assigned to this cluster
-    sum_xx::Array{Float64,1} # sum of x.*x for the data points assigned to this cluster
+    lsum_gene::Array{Float64,1}  # log-sum of the data points x assigned to this cluster i.e. log(C_i!)
+    sum_xx::Array{Float64,1}     # sum of x.*x for the data points assigned to this cluster
     Theta(d) = (p=new(); p.n=0; p.sum_x=zeros(d); p.sum_xx=zeros(d); p)
+    lsum_cell::Float64 
 end
 new_theta(H) = Theta(H.d)
 Theta_clear!(p) = (p.sum_x[:] .= 0.; p.sum_xx[:] .= 0.; p.n = 0)
-Theta_adjoin!(p,x) = (for i=1:length(x); p.sum_x[i] += x[i]; p.sum_xx[i] += x[i]*x[i]; end; p.n += 1)
-Theta_remove!(p,x) = (for i=1:length(x); p.sum_x[i] -= x[i]; p.sum_xx[i] -= x[i]*x[i]; end; p.n -= 1)
+Theta_adjoin!(p,x) = (for i=1:length(x); p.lsum_gene[i] += lgauss(x[i]); p.lsum_cell[i] += lgauss(sum(x[i])); end; p.n += 1)
+Theta_remove!(p,x) = (for i=1:length(x); p.lsum_gene[i] -= lgauss(x[i]); p.lsum_cell[i] -= lgauss(sum(x[i])); end; p.n -= 1)
 
 
-
-# In each dimension independently,
-# X_1,...,X_n ~ Normal(mu,1/lambda) with Normal(mu|m,1/(c*lambda))Gamma(lambda|a,b) prior on mean=mu, precision=lambda.
+# Marginal/compound distribution for one particular cluster specified by p (i.e. theta)
 function log_marginal(p,H)
-    print(H)
+    print("\n Start of p")
+    print(p)
+    print("\nEnd of p\n")
     # Multinomial-Dirichlet-distribution: https://en.wikipedia.org/wiki/Dirichlet-multinomial_distributio
     logΓ = function (n) 
         res = 0
@@ -38,10 +42,7 @@ function log_marginal(p,H)
     logB = function (a,n)
         logΓ(a)+logΓ(n)-logΓ(a+n)
     end
-    for k in 1:d
-        res += sum(logΓ())+logB(p.sum_x[k]+H.α)-logB(H.α)
-    end
-    return res
+    p.lsum_gene-sum(p.lsum_cell)+logB(p.sum_x[k]+H.α)-logB(H.α)
 end
 
 function log_marginal(x,p,H)
