@@ -43,6 +43,9 @@ function options(
         alpha_random=true, # put prior on alpha (DPM concentration parameter) or not
         alpha=1.0, # value of alpha (initial value if alpha_random=true)
 
+        # Dir-MN options:
+        β=[0.0], #prior specification for Multinomial-Dirichlet model
+
         # Jain-Neal split-merge options:
         use_splitmerge=true, # use split-merge or not
         n_split=5, # number of intermediate sweeps for split launch state
@@ -70,7 +73,7 @@ function options(
     n_keep = min(n_keep,n_total)
     module_ = getfield(BayesianMixtures,Symbol(mode))
     return module_.Options(mode, model_type, x, n_total, n_keep, n_burn, verbose,
-                           use_hyperprior, t_max, gamma, log_pk, alpha_random, alpha,
+                           use_hyperprior, t_max, gamma, log_pk, alpha_random, alpha, β,
                            use_splitmerge, n_split, n_merge, k_max, a, b, log_v, n)
 end
 

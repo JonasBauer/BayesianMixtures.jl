@@ -25,9 +25,6 @@ Theta_remove!(p,x) = (for i=1:length(x); p.sum_x[i] -= x[i]; p.sum_xx[i] -= x[i]
 # In each dimension independently,
 # X_1,...,X_n ~ Normal(mu,1/lambda) with Normal(mu|m,1/(c*lambda))Gamma(lambda|a,b) prior on mean=mu, precision=lambda.
 function log_marginal(p,H)
-    print("\n Start of p")
-    print(p)
-    print("\nEnd of p\n")
     n = p.n
     LB = 0.0
     for i=1:H.d; LB += log(H.b + 0.5*p.sum_xx[i] - 0.5*p.sum_x[i]*p.sum_x[i]/n + 0.5*H.c*n*(p.sum_x[i]/n - H.m)^2/(H.c+n)); end

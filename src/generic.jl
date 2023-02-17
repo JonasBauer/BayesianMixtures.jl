@@ -15,6 +15,8 @@ struct Options
     # DPM options
     alpha_random::Bool
     alpha::Float64
+    # Dir-MN options
+    β::Array{Float64,1}
     # Jain-Neal split-merge options
     use_splitmerge::Bool
     n_split::Int64

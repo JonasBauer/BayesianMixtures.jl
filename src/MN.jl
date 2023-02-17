@@ -10,39 +10,36 @@ using SpecialFunctions
 
 const Data = Array{Float64,1}
 
-lgauss = function (n::Int64)
-    log.(n*(n.+1)./2)
-end
 mutable struct Theta
     n::Int64                 # number of data points assigned to this cluster
-    lsum_gene::Array{Float64,1}  # log-sum of the data points x assigned to this cluster i.e. log(C_i!)
-    sum_xx::Array{Float64,1}     # sum of x.*x for the data points assigned to this cluster
-    Theta(d) = (p=new(); p.n=0; p.sum_x=zeros(d); p.sum_xx=zeros(d); p)
-    lsum_cell::Float64 
+    #lsum_gene::Array{Float64,1}  # log-sum of the data points x assigned to this cluster i.e. log(C_i!)
+    sum_x::Array{Float64,1}
+    Theta(d) = (p=new(); p.n=0; p.sum_x=zeros(d); p)
 end
+
 new_theta(H) = Theta(H.d)
-Theta_clear!(p) = (p.sum_x[:] .= 0.; p.sum_xx[:] .= 0.; p.n = 0)
-Theta_adjoin!(p,x) = (for i=1:length(x); p.lsum_gene[i] += lgauss(x[i]); p.lsum_cell[i] += lgauss(sum(x[i])); end; p.n += 1)
-Theta_remove!(p,x) = (for i=1:length(x); p.lsum_gene[i] -= lgauss(x[i]); p.lsum_cell[i] -= lgauss(sum(x[i])); end; p.n -= 1)
+Theta_clear!(p) = (p.sum_x .= 0; p.n = 0)
+Theta_adjoin!(p,x) = (p.sum_x+=x; p.n += 1)
+Theta_remove!(p,x) = (p.sum_x-=x; p.n -= 1)
 
 
 # Marginal/compound distribution for one particular cluster specified by p (i.e. theta)
 function log_marginal(p,H)
-    print("\n Start of p")
-    print(p)
-    print("\nEnd of p\n")
     # Multinomial-Dirichlet-distribution: https://en.wikipedia.org/wiki/Dirichlet-multinomial_distributio
-    logΓ = function (n) 
-        res = 0
-        for i=2:(n-1)
-            res += log(i)
-        end
-        return res
-    end
-    logB = function (a,n)
-        logΓ(a)+logΓ(n)-logΓ(a+n)
-    end
-    p.lsum_gene-sum(p.lsum_cell)+logB(p.sum_x[k]+H.α)-logB(H.α)
+    # logB = function (a,n)
+    #     logΓ = function (n) 
+    #         res = 0
+    #         for i=2:(n-1)
+    #             res += log(i)
+    #         end
+    #         return res
+    #     end
+    #     logΓ(a)+logΓ(n)-logΓ(a+n)
+    # end
+    print("\n P\n",p)
+    log_marg = loggamma(sum(p.sum_x+H.β)) + loggamma(p.n+1) - loggamma(sum(p.sum_x+H.β)+p.n) +  sum(loggamma.(p.sum_x + H.β)) - H.lgamma_sum - sum(loggamma.(p.sum_x .+ 1))
+    print("\n log-Marginal:\n",log_marg)
+    return log_marg
 end
 
 function log_marginal(x,p,H)
@@ -54,15 +51,25 @@ end
 
 mutable struct Hyperparameters
     d::Int64 
-    α::Array{Float64,1}  # prior Dirichlet parameter for gene expression levels
+    β::Array{Float64,1}  # prior Dirichlet parameter for gene expression levels
+    beta_sum::Float64
+    lgamma_sum::Float64
 end
+
 
 function construct_hyperparameters(options)
     x = options.x
     n = length(x)
     d = length(x[1])
-    α = repeat([1],d)
-    return Hyperparameters(α)
+    β =  options.β
+    if any(β .<= 0)
+        @warn "β > 0 required and was thus set to repeat([1],G)"
+        β; β = repeat([1],d)
+    end
+    beta_sum = sum(β)
+    lgamma_sum = loggamma(beta_sum)
+    
+    return Hyperparameters(d,β,beta_sum,lgamma_sum)
 end
 
 function update_hyperparameters!(H,theta,list,t,x,z)
