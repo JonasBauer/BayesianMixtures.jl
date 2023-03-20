@@ -25,7 +25,8 @@ lgamma_(x) = logabsgamma(x)[1]
 # Create an options object to specify model, data, and MCMC parameters.
 function options(
         mode, # "Normal", "MVN", "MVNaaC", "MVNaaN", "MN", or "MVNaaRJ"
-        model_type, # "MFM" or "DPM"
+        model_type, # "MFM" or "DPM" 
+        #sampler, # "split-merge" or "gibbs"
         x, # data
         n_total; # total number of MCMC sweeps to run the sampler
         n_keep=n_total, # number of MCMC sweeps to keep after thinning

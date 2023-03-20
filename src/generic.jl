@@ -2,6 +2,7 @@
 struct Options
     mode::String
     model_type::String
+    #sampler::String
     x::Array{Data,1}
     n_total::Int64
     n_keep::Int64
