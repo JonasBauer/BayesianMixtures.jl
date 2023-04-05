@@ -20,9 +20,8 @@ end
 
 new_theta(H) = Theta(H.G, H.C0)
 Theta_clear!(p) = (p.n = 0; p.sum_gene .= 0.0; p.log_sum=0)          # should be β from Dir-prior
-Theta_adjoin!(p,x) = (p.log_sum += loggamma(sum(x)+p.C0)-sum(loggamma.(prepend(x .+ 1, p.C0))); p.sum_gene += prepend(x, p.C0); p.n += 1)
-Theta_remove!(p,x) = (p.log_sum -= loggamma(sum(x)+p.C0)-sum(loggamma.(prepend(x .+ 1, p.C0))); p.sum_gene -= prepend(x, p.C0); p.n -= 1)
-
+Theta_adjoin!(p,x) = (p.log_sum += loggamma(sum(x)+p.C0)-sum(loggamma.(vcat(p.C0, x .+ 1))); p.sum_gene += vcat(p.C0, x); p.n += 1)
+Theta_remove!(p,x) = (p.log_sum -= loggamma(sum(x)+p.C0)-sum(loggamma.(vcat(p.C0, x .+ 1))); p.sum_gene -= vcat(p.C0, x); p.n -= 1)
 
 
 function log_marginal(p,H)
@@ -31,14 +30,14 @@ function log_marginal(p,H)
     # Marginal derived from likelihood x prior / posterior:
     # Reference number in the Xournal formula:
     #                    1                       2                           3                       4             5           
-    log_marg = sum(loggamma.(sum_gene .+H.β))-H.sum_lgamma-loggamma(sum(p.sum_gene)+H.beta_sum)+H.lgamma_sum+p.log_sum
-
+    log_marg = sum(loggamma.(p.sum_gene .+H.β))-H.sum_lgamma-loggamma(sum(p.sum_gene)+H.beta_sum)+H.lgamma_sum+p.log_sum
     return log_marg
 end
 
 function log_marginal(x,p,H)
     Theta_adjoin!(p,x)
     result = log_marginal(p,H)
+    print(result)
     Theta_remove!(p,x)
     return result
 end
@@ -49,7 +48,7 @@ mutable struct Hyperparameters
     beta_sum::Float64
     lgamma_sum::Float64
     sum_lgamma::Float64
-    lgamma_C0::Float64
+    C0::Int64
 end
 
 
@@ -61,13 +60,12 @@ function construct_hyperparameters(options)
     C0 = options.C0
     if any(β .<= 0)
         #@warn "β > 0 required and was thus set to repeat([1],G)"
-        β; β = repeat([1],G+1)
+        β = repeat([1],G+1)
     end
     beta_sum = sum(β)
     sum_lgamma = sum(loggamma.(β))
     lgamma_sum = loggamma(beta_sum)
-    lgamma_C0 = loggamma(C0)
-    return Hyperparameters(β,beta_sum,lgamma_sum, sum_lgamma, lgamma_C0)
+    return Hyperparameters(G, β, beta_sum, lgamma_sum, sum_lgamma, C0)
 end
 
 function update_hyperparameters!(H,theta,list,t,x,z)

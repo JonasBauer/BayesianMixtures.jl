@@ -18,7 +18,7 @@ struct Options
     alpha::Float64
     # Dir-MN options
     β::Array{Float64,1}
-    C0:::Int64
+    C0::Int64
     # Jain-Neal split-merge options
     use_splitmerge::Bool
     n_split::Int64
