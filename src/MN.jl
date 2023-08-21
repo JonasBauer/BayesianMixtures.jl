@@ -54,6 +54,7 @@ MVN_remove!(p,x) = (for i=1:p.d; p.sum_x[i]-=x[i]; for j=1:p.d; p.sum_xx[i,j]-=x
 
 
 
+<<<<<<< Updated upstream
 # Wishart distribution
 mutable struct Wishart_params
     # read/restricted-write (must notify after writing)
@@ -77,6 +78,25 @@ mutable struct Wishart_params
         p.sum_logdetR = 0.
         return p
     end
+=======
+    # First trial
+    #log_marg = loggamma(sum(p.sum_x+H.β)) + loggamma(p.n+1) - loggamma(sum(p.sum_x+H.β)+p.n) +  sum(loggamma.(p.sum_x + H.β)) - H.lgamma_sum - sum(loggamma.(p.sum_x .+ 1))
+    # log(Product density from Wikipedia's Multinomial-Dirichlet compound)
+    # Product density of compound with prior
+    # log_marg = p.n*(H.lgamma_sum + loggamma(p.n+1) - loggamma(p.n+H.beta_sum) - H.sum_lgamma) + p.sum_lgamma
+    # # Product density of compound with posterior
+    # post_beta_sum = H.beta_sum+sum(p.sum_gene)
+    # log_marg = p.n*(loggamma(post_beta_sum) + loggamma(p.n+1) - loggamma(p.n+post_beta_sum) - sum(loggamma.(H.β .+ p.sum_gene))) + p.sum_lgamma
+
+    #print("\n log-Marginal:\n",log_marg)
+    #print("\n P\n",p)
+
+    # Marginal derived from likelihood x prior / posterior:
+    #log_marg = sum(loggamma.(p.sum_gene .+H.β))-H.sum_lgamma-loggamma(sum(p.sum_gene)+H.beta_sum)+H.lgamma_sum + p.log_sum 
+
+    return sum(loggamma.(p.sum_gene .+H.β))-H.sum_lgamma-loggamma(sum(p.sum_gene)+H.beta_sum)+H.lgamma_sum + p.log_sum 
+ #log_marg
+>>>>>>> Stashed changes
 end
 # Helper functions
 matrix_dot(A,B,d) = (r=0.; for i=1:d*d; r += A[i]*B[i]; end; r)

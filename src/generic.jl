@@ -34,6 +34,7 @@ struct Result
     t::Array{Int8,1}
     N::Array{Int16,2}
     z::Array{Int8,2}
+    alpha::Array{Float64}
     theta::Array{Theta,2}
     keepers::Array{Int64,1}
     elapsed_time::Float64

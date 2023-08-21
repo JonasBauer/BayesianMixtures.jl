@@ -228,6 +228,7 @@ function sampler(options,n_total,n_keep)
     t_r = zeros(Int8,n_total); @assert(t_max < 2^7)
     N_r = zeros(Int16,t_max+3,n_total); @assert(n < 2^15)
     z_r = zeros(Int8,n,n_keep); @assert(t_max < 2^7)
+    alpha_r = fill(alpha, n_total)
     theta_r = Array{Theta}(undef,0,0)
     
     for iteration = 1:n_total
@@ -301,13 +302,16 @@ function sampler(options,n_total,n_keep)
         for j = 1:t
             N_r[list[j],iteration] = N[list[j]]
         end
+        if model_type=="DPM" && alpha_random
+            alpha_r[iteration] = alpha
+        end
         if iteration==keepers[keep_index+1]
             keep_index += 1
             for i = 1:n; z_r[i,keep_index] = z[i]; end
         end
     end
     
-    return t_r,N_r,z_r,theta_r,keepers
+    return t_r,N_r,z_r,alpha_r,theta_r,keepers
 end
 
 

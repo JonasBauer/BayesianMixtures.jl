@@ -92,7 +92,7 @@ function run_sampler(options)
     end
     
     # Main run
-    elapsed_time = (@elapsed t_r,N_r,z_r,theta_r,keepers = module_.sampler(o,n_total,n_keep))
+    elapsed_time = (@elapsed t_r,N_r,z_r,alpha_r,theta_r,keepers = module_.sampler(o,n_total,n_keep))
     time_per_step = elapsed_time/(n_total*n)
 
     if o.verbose
@@ -106,7 +106,7 @@ function run_sampler(options)
     # Profile.print(format = :flat)
     # Profile.clear()
     
-    return module_.Result(o,t_r,N_r,z_r,theta_r,keepers,elapsed_time,time_per_step)
+    return module_.Result(o,t_r,N_r,z_r,alpha_r,theta_r,keepers,elapsed_time,time_per_step)
 end
 
 
