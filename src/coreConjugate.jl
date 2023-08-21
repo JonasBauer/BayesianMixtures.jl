@@ -1,5 +1,6 @@
 
 using SpecialFunctions
+using StatsBase
 lgamma_(x) = logabsgamma(x)[1]
 
 logsumexp(a,b) = (m = max(a,b); m == -Inf ? -Inf : log(exp(a-m) + exp(b-m)) + m)
@@ -230,20 +231,31 @@ function sampler(options,n_total,n_keep)
     z_r = zeros(Int8,n,n_keep); @assert(t_max < 2^7)
     alpha_r = fill(alpha, n_total)
     theta_r = Array{Theta}(undef,0,0)
-    
+
     for iteration = 1:n_total
         #  -------------- Resample H --------------
         if use_hyperprior
             update_hyperparameters!(H,theta,list,t,x,z)
         end
         if model_type=="DPM" && alpha_random
-            # Metropolis-Hastings move for DP concentration parameter (using p_alpha(a) = Gamma(b,c) with b/c = E(K) and b->0 for non-informative priors
-            aprop = alpha*exp(randn()*sigma_alpha)
-            top = t*log(aprop) - lgamma_(aprop+n) + lgamma_(aprop) - aprop + log(aprop)
-            bot = t*log(alpha) - lgamma_(alpha+n) + lgamma_(alpha) - alpha + log(alpha)
-            if rand() < min(1.0,exp(top-bot))
-                alpha = aprop
-            end
+            # Metropolis-Hastings move for DP concentration parameter (using p_alpha(a) = Gamma(c,d) with c/d = E(K) and 
+            # c=d=exp(-0.0033n) for non-informative priors
+            c = exp(-0.0033*n)
+            d = c
+            # Conditional Gibbs based on Escobar and West 1995
+            leta = log(rand(Beta(alpha +1, n)))
+            pi_eta = (c+t-1)/(c+t-1+n*(d-leta))
+            g1 = rand(Gamma(c+t,d-leta))
+	    g2 = rand(Gamma(c+t-1,d-leta))
+	    alpha = sample([g1,g2], weights([pi_eta,1-pi_eta]))
+            
+            # BELOW IS THE PREVIOUS \alpha \sim exp(1) APPROACH FROM MILLER
+            #aprop = alpha*exp(randn()*sigma_alpha)
+            #top = t*log(aprop) - lgamma_(aprop+n) + lgamma_(aprop) - aprop + log(aprop)
+            #bot = t*log(alpha) - lgamma_(alpha+n) + lgamma_(alpha) - alpha + log(alpha)
+            #if rand() < min(1.0,exp(top-bot))
+            #    alpha = aprop
+            #end
             #for i=1:t_max+1; log_v[i] = i*log(alpha) - lgamma_(alpha+n) + lgamma_(alpha); end
             log_v = float(1:t_max+1)*log(alpha) .- lgamma_(alpha+n) .+ lgamma_(alpha)
         end
