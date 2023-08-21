@@ -236,7 +236,7 @@ function sampler(options,n_total,n_keep)
             update_hyperparameters!(H,theta,list,t,x,z)
         end
         if model_type=="DPM" && alpha_random
-            # Metropolis-Hastings move for DP concentration parameter (using p_alpha(a) = exp(-a) = Exp(a|1))
+            # Metropolis-Hastings move for DP concentration parameter (using p_alpha(a) = Gamma(b,c) with b/c = E(K) and b->0 for non-informative priors
             aprop = alpha*exp(randn()*sigma_alpha)
             top = t*log(aprop) - lgamma_(aprop+n) + lgamma_(aprop) - aprop + log(aprop)
             bot = t*log(alpha) - lgamma_(alpha+n) + lgamma_(alpha) - alpha + log(alpha)
