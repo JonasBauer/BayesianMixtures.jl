@@ -151,6 +151,8 @@ function split_merge!(x,z,zs,S,theta,list,N,t,H,a,b,log_v,n_split,n_merge)
             t += 1
             Theta_clear!(ti0)
         else # reject split
+            #print("\n     Split rejeceted!    \n")
+            #print("Acceptance probability: ", p_accept, "\n")
             Theta_clear!(ti)
             Theta_clear!(tj)
         end
@@ -182,6 +184,8 @@ function split_merge!(x,z,zs,S,theta,list,N,t,H,a,b,log_v,n_split,n_merge)
             Theta_clear!(ti0)
             Theta_clear!(tj0)
         else # reject merge
+            #print("\n     Merge rejeceted!    \n")
+            #print("Acceptance probability: ", p_accept, "\n")
             Theta_clear!(tm)
         end
         Theta_clear!(ti)

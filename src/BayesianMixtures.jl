@@ -3,9 +3,9 @@ module BayesianMixtures
 
 include("MFM.jl")
 include("RandomNumbers.jl")
-
 include("Normal.jl")
-include("MN.jl"
+include("MN.jl")
+include("NMN.jl")
 include("MVN.jl")
 include("MVNaaC.jl")
 include("MVNaaN.jl")
@@ -25,8 +25,9 @@ lgamma_(x) = logabsgamma(x)[1]
 
 # Create an options object to specify model, data, and MCMC parameters.
 function options(
-        mode, # "Normal", "MVN", "MVNaaC", "MVNaaN", "MN", or "MVNaaRJ"
-        model_type, # "MFM" or "DPM"
+        mode, # "Normal", "MVN", "MVNaaC", "MVNaaN", "MN", "NMN", or "MVNaaRJ"
+        model_type, # "MFM" or "DPM" 
+        #sampler, # "split-merge" or "gibbs"
         x, # data
         n_total; # total number of MCMC sweeps to run the sampler
         n_keep=n_total, # number of MCMC sweeps to keep after thinning
@@ -44,6 +45,12 @@ function options(
         alpha_random=true, # put prior on alpha (DPM concentration parameter) or not
         alpha=1.0, # value of alpha (initial value if alpha_random=true)
 
+        # Dir-MN options:
+        β=[0.0], #prior specification for Multinomial-Dirichlet model
+        
+        # neg. Dir-MN options:
+        C0 = 300,
+
         # Jain-Neal split-merge options:
         use_splitmerge=true, # use split-merge or not
         n_split=5, # number of intermediate sweeps for split launch state
@@ -52,7 +59,7 @@ function options(
         # RJMCMC options:
         k_max=t_max # a guess at an upper bound on # of components that will be encountered during MCMC
     )
-
+    
     # Compute partition distribution values
     n = length(x)
     if model_type=="MFM"
@@ -71,7 +78,7 @@ function options(
     n_keep = min(n_keep,n_total)
     module_ = getfield(BayesianMixtures,Symbol(mode))
     return module_.Options(mode, model_type, x, n_total, n_keep, n_burn, verbose,
-                           use_hyperprior, t_max, gamma, log_pk, alpha_random, alpha,
+                           use_hyperprior, t_max, gamma, log_pk, alpha_random, alpha, β, C0, 
                            use_splitmerge, n_split, n_merge, k_max, a, b, log_v, n)
 end
 

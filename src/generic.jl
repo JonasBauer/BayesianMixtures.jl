@@ -2,6 +2,7 @@
 struct Options
     mode::String
     model_type::String
+    #sampler::String
     x::Array{Data,1}
     n_total::Int64
     n_keep::Int64
@@ -15,6 +16,9 @@ struct Options
     # DPM options
     alpha_random::Bool
     alpha::Float64
+    # Dir-MN options
+    β::Array{Float64,1}
+    C0::Int64
     # Jain-Neal split-merge options
     use_splitmerge::Bool
     n_split::Int64

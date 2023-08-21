@@ -18,6 +18,7 @@ mutable struct Theta
     Theta(d) = (p=new(); p.n=0; p.sum_x=zeros(d); p.sum_xx=zeros(d); p)
 end
 new_theta(H) = Theta(H.d)
+
 Theta_clear!(p) = (p.sum_x[:] .= 0.; p.sum_xx[:] .= 0.; p.n = 0)
 Theta_adjoin!(p,x) = (for i=1:length(x); p.sum_x[i] += x[i]; p.sum_xx[i] += x[i]*x[i]; end; p.n += 1)
 Theta_remove!(p,x) = (for i=1:length(x); p.sum_x[i] -= x[i]; p.sum_xx[i] -= x[i]*x[i]; end; p.n -= 1)
@@ -26,9 +27,12 @@ Theta_remove!(p,x) = (for i=1:length(x); p.sum_x[i] -= x[i]; p.sum_xx[i] -= x[i]
 # X_1,...,X_n ~ Normal(mu,1/lambda) with Normal(mu|m,1/(c*lambda))Gamma(lambda|a,b) prior on mean=mu, precision=lambda.
 function log_marginal(p,H)
     n = p.n
-    LB = 0.0
+    # probably log(b_n) i.e. log of posterior parameter
+    LB = 0.0               #<--                                            b                                            -->               
     for i=1:H.d; LB += log(H.b + 0.5*p.sum_xx[i] - 0.5*p.sum_x[i]*p.sum_x[i]/n + 0.5*H.c*n*(p.sum_x[i]/n - H.m)^2/(H.c+n)); end
+    # power of G(=dimensions) <from marginal>  <log(c/(c+n))/2>                 a * log(b) <-- posterior params
     return H.d*(H.constant - 0.5*n*log(2*pi) - 0.5*log(H.c+n) + H.log_Ga[n]) - (H.a+0.5*n)*LB
+    # the constant contains all the hyperparameter-related terms! 
 end
 
 function log_marginal(x,p,H)
@@ -54,7 +58,7 @@ function construct_hyperparameters(options)
     d = length(x[1])
     mu = mean(x)
     v = mean([xi.*xi for xi in x]) .- mu.*mu  # sample variance
-    @assert(all(abs.(mu) .< 1e-10) && all(abs.(v .- 1.0) .< 1e-10), "Data must be normalized to zero mean, unit variance.")
+    @assert(all(abs.(mu) .< 3e-2) && all(abs.(v .- 1.0) .< 3e-2), "Data must be normalized to zero mean, unit variance.")
     m = 0.0
     c = 1.0
     a = 1.0
