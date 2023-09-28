@@ -16,6 +16,8 @@ struct Options
     # DPM options
     alpha_random::Bool
     alpha::Float64
+    alpha_a::Float64
+    alpha_b::Float64
     # Dir-MN options
     β::Array{Float64,1}
     C0::Int64

@@ -15,6 +15,7 @@ include("NormalNonoptimized.jl")
 using Random
 using Statistics
 using SpecialFunctions
+
 lgamma_(x) = logabsgamma(x)[1]
 
 # ===================================================================
@@ -44,7 +45,9 @@ function options(
         # DPM options:
         alpha_random=true, # put prior on alpha (DPM concentration parameter) or not
         alpha=1.0, # value of alpha (initial value if alpha_random=true)
-
+        # Hyperparameter for alpha, if they should be fixed:
+        alpha_a=1.0,
+        alpha_b=1.0,
         # Dir-MN options:
         β=[0.0], #prior specification for Multinomial-Dirichlet model
         
@@ -78,7 +81,7 @@ function options(
     n_keep = min(n_keep,n_total)
     module_ = getfield(BayesianMixtures,Symbol(mode))
     return module_.Options(mode, model_type, x, n_total, n_keep, n_burn, verbose,
-                           use_hyperprior, t_max, gamma, log_pk, alpha_random, alpha, β, C0, 
+                           use_hyperprior, t_max, gamma, log_pk, alpha_random, alpha, alpha_a, alpha_b, β, C0, 
                            use_splitmerge, n_split, n_merge, k_max, a, b, log_v, n)
 end
 
@@ -99,7 +102,7 @@ function run_sampler(options)
     end
     
     # Main run
-    elapsed_time = (@elapsed t_r,N_r,z_r,alpha_r,theta_r,keepers = module_.sampler(o,n_total,n_keep))
+    elapsed_time = (@elapsed t_r,N_r,z_r,alpha_r,theta_r,keepers, acc_freq = module_.sampler(o,n_total,n_keep))
     time_per_step = elapsed_time/(n_total*n)
 
     if o.verbose
@@ -107,6 +110,7 @@ function run_sampler(options)
         println("Elapsed time = $elapsed_time seconds")
         println("Time per step ~ $time_per_step seconds")
     end
+    println("Accepted steps for alpha:", acc_freq)
 
     # # Run profiler
     # @profile sampler(x,n_total,n_keep,o)

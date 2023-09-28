@@ -42,13 +42,13 @@ end
 function construct_hyperparameters(options)
     x = options.x
     # Use values in Green & Richardson (1997) to enable comparison.
-    m = (minimum(x) + maximum(x))/2
-    R = maximum(x) - minimum(x)
-    s = R
+    m = 1/2*(5.039007+-6.616866)#(minimum(x) + maximum(x))/2
+    R = (5.039007+6.616866)^-2#maximum(x) - minimum(x)
+    s = 1/R
     a = 2.0
     b = 1.0  # b will be updated in Gibbs sampling
     g = 0.2
-    h = 10/R^2
+    h = 10/R	
     return Hyperparameters(m,s,a,b,g,h)
 end
 

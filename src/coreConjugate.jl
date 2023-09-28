@@ -1,6 +1,8 @@
 
 using SpecialFunctions
 using StatsBase
+using Distributions: Beta, Gamma
+
 lgamma_(x) = logabsgamma(x)[1]
 
 logsumexp(a,b) = (m = max(a,b); m == -Inf ? -Inf : log(exp(a-m) + exp(b-m)) + m)
@@ -202,14 +204,15 @@ function sampler(options,n_total,n_keep)
     use_hyperprior = options.use_hyperprior
 
     model_type = options.model_type
-    alpha_random,alpha = options.alpha_random,options.alpha
+    alpha_random,alpha, alpha_a, alpha_b  = options.alpha_random,options.alpha, options.alpha_a, options.alpha_b
     sigma_alpha = 0.1 # scale for MH proposals in alpha move
+    # Hyperparameters forconcentration alpha with alpha_a=alpha_b=exp(-0.0033n) for non-informative priors
 
     @assert(n==length(x))
     keepers = zeros(Int,n_keep)
     keepers[:] = round.(Int,range(round(Int,n_total/n_keep),stop=n_total,length=n_keep))
     keep_index = 0
-
+    
     t = 1  # number of clusters
     z = ones(Int,n)  # z[i] = the cluster ID associated with data point i
     list = zeros(Int,t_max+3); list[1] = 1  # list[1:t] = the list of active cluster IDs
@@ -235,32 +238,30 @@ function sampler(options,n_total,n_keep)
     z_r = zeros(Int8,n,n_keep); @assert(t_max < 2^7)
     alpha_r = fill(alpha, n_total)
     theta_r = Array{Theta}(undef,0,0)
-
+    counter = 0
+         
     for iteration = 1:n_total
         #  -------------- Resample H --------------
         if use_hyperprior
             update_hyperparameters!(H,theta,list,t,x,z)
         end
         if model_type=="DPM" && alpha_random
-            # Metropolis-Hastings move for DP concentration parameter (using p_alpha(a) = Gamma(c,d) with c/d = E(K) and 
-            # c=d=exp(-0.0033n) for non-informative priors
-            c = exp(-0.0033*n)
-            d = c
-            # Conditional Gibbs based on Escobar and West 1995
+            # Conditional Gibbs based on Escobar and West 1995 for DP concentration parameter (using p(alpha) = Gamma(alpha_a,alpha_b) 		    # alpha_a/alpha_b = E(K)  
             leta = log(rand(Beta(alpha +1, n)))
-            pi_eta = (c+t-1)/(c+t-1+n*(d-leta))
-            g1 = rand(Gamma(c+t,d-leta))
-	    g2 = rand(Gamma(c+t-1,d-leta))
-	    alpha = sample([g1,g2], weights([pi_eta,1-pi_eta]))
+            pi_eta = (alpha_a+t-1)/(alpha_a+t-1+n*(alpha_b-leta))
+	    mix = sample(0:1, weights([pi_eta,1-pi_eta]))
+	    # Distrtibutions:Gamma(shape, scale=1/rate) ; rate used in West 1995
+            aprop = rand(Gamma(alpha_a+t-mix,1/(alpha_b-leta)))
             
-            # BELOW IS THE PREVIOUS \alpha \sim exp(1) APPROACH FROM MILLER
+            # BELOW IS THE PREVIOUS \alpha \sim Exp(1) APPROACH FROM MILLER
             #aprop = alpha*exp(randn()*sigma_alpha)
-            #top = t*log(aprop) - lgamma_(aprop+n) + lgamma_(aprop) - aprop + log(aprop)
-            #bot = t*log(alpha) - lgamma_(alpha+n) + lgamma_(alpha) - alpha + log(alpha)
-            #if rand() < min(1.0,exp(top-bot))
+            top = t*log(aprop) - lgamma_(aprop+n) + lgamma_(aprop) - aprop + log(aprop)
+            bot = t*log(alpha) - lgamma_(alpha+n) + lgamma_(alpha) - alpha + log(alpha)
+            if rand() < min(1.0,exp(top-bot))
             #    alpha = aprop
-            #end
-            #for i=1:t_max+1; log_v[i] = i*log(alpha) - lgamma_(alpha+n) + lgamma_(alpha); end
+                counter += 1
+            end
+            alpha = aprop
             log_v = float(1:t_max+1)*log(alpha) .- lgamma_(alpha+n) .+ lgamma_(alpha)
         end
         
@@ -327,7 +328,7 @@ function sampler(options,n_total,n_keep)
         end
     end
     
-    return t_r,N_r,z_r,alpha_r,theta_r,keepers
+    return t_r,N_r,z_r,alpha_r,theta_r,keepers,string(round(counter/n_total,digits=2))
 end
 
 
